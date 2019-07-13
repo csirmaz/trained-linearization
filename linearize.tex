@@ -1,4 +1,4 @@
-documentclass{article}[12pt]
+\documentclass{article}[12pt]
 \title{Interpreting Neural Nets by Using Training to Remove Nonlinearities}
 \author{Elod Pal Csirmaz}
 
@@ -12,9 +12,43 @@ Abstract
 \end{abstract}
 
 \section{Introduction}
+
 Intro
-\paragraph{Outline}
-First
+
+We investigate feed-forward neural networks
+where all nonlinearities are Parametric Rectified Linear Units (PReLUs)
+(CITE ?, torch) % https://github.com/torch/nn/blob/master/doc/transfer.md#prelu
+% https://arxiv.org/abs/1502.01852
+defined as
+\[ f(x) = \max(0, x) + a \min(0, x). \]
+
+Let the input of the network be the vector (or tensor, which we flatten) $I=(i_1, i_2, \ldots, i_n)$
+and the output be the vector (or tensor) $O=(o_1, o_2, \ldots, o_m)$.
+
+It is easy to see that the output $O$ of such a network can be expressed
+as a set of linear combinations of $i_x$, each restricted to a particular region of input values
+by a set of linear inequalities on $i_x$.
+
+Intuitively, this is true because the output is a linear function of the input
+as long as (that is, inside regions of the possible input vectors in which) none of the inputs of PReLUs
+cross from negative to positive or \emph{vice versa}; and the borders of these regions
+are linear as well.
+
+More formally, we can show that this statement is true by constructing a suitable
+system of linear functions for any given neural network.
+For all PReLUs in the network, let us decide whether their inputs are negative, or nonnegative.
+If the number of PReLUs is $\Delta$, this means $2^\Delta$ possible scenarios.
+In each scenario, the neural network becomes completely linear, with the output being a linear function of the input,
+and, in fact, all partial results in the network being linear functions of the input.
+This entails that the inputs of PReLUs are also linear functions of the input, yielding
+the $\Delta$ linear inequalities that mark out the portion of the input space where this scenario is true.
+
+Naturally, this system of $2^\Delta$ linear combinations yielding the output, each controlled by $\Delta$
+inequalities is likely to be redundant, as the inequalities may not be independent,
+or may be contradictory, in which case the portion of the input space is empty.
+But this system will be an accurate description of the output of the neural network nevertheless.
+
+
 
 
 
