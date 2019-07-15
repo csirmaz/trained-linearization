@@ -1,5 +1,5 @@
 \documentclass{article}[12pt]
-\title{Interpreting Neural Nets by Using Training to Remove Nonlinearities}
+\title{Interpreting Neural Nets by Training to Reduce Nonlinearities}
 \author{Elod Pal Csirmaz}
 
 \date{\today}
@@ -14,6 +14,8 @@ Abstract
 \section{Introduction}
 
 Intro
+
+Rule extraction
 
 We investigate feed-forward neural networks
 where all nonlinearities are Parametric Rectified Linear Units (PReLUs)
@@ -52,6 +54,7 @@ But this system will be an accurate description of the output of the neural netw
 
 \bigskip
 
+\noindent
 While a linear function may seem easy to interpret and to predict for us humans, clearly $2^\delta$
 functions will not be so if $\delta$ is in the range of thousands or millions as in most modern neural networks.
 We therefore need to construct an approximation of the output of our neural network which is linear in much
@@ -59,7 +62,7 @@ larger regions of the input space, and has far less different regions as well.
 This is equivalent to trying to find another neural network that approximates our network well,
 but contains a small number of PReLUs only.
 
-\section{Reducing PReLUs into Lineraities}
+\section{Reducing PReLUs into Linearities}
 
 We achieve this by continuing training the original neural network while applying a force on each of
 its PReLUs that moves its parameter $a$ towards 1.
@@ -69,16 +72,32 @@ In a sense, it disappears, and the neural network ``collapses'' around it, inasm
 that precedes the degenerate PReLU and the one after it can now be combined into a single linear map.
 
 This force therefore finds a balance between approximating the training data
-and reducing the number of PReLUs, thereby yielding a neural network that can be feasilby expressed
-as a set of linear functions and inequalities.
+and reducing the number of PReLUs, thereby yielding a neural network that if feasible to express
+as a set of linear functions and inequalities for human consumption.
 By removing nonlinearities, this force also reduces the capacity of the neural network,
-and therefore we expect that it can also be helpful in avoid overfitting.
+and therefore we expect that it can also be helpful to avoid overfitting.
 
-This force is a static force applied after each backpropagation step, that moves the parameter by an adjustment rate
-$\epsilon$ but never above 1:
+This force is a static force applied after each backpropagation step, and moves the parameter by an adjustment rate
+$\eta_p$ but never above 1:
+\[ a_{t+1} = \max\left(0,\;\min\big(1,\;a_t + \eta_p\,\mathrm{sgn}(1-a_t)\,\big)\right) \]
 
-\[ a_{t+1} = \max\left(0,\;\min\big(1,\;a_t + \epsilon\,\mathrm{sgn}(1-a_t)\,\big)\right) \]
+In our research we considered any PReLU fully linear if
+\[ a > 0.9995 \]
 
+We also made $\eta_p$ dependent on the current error exhibited by the network,
+to allow the network initially to train without interference, and then
+pull the PReLU parameters to 1 more and more aggressively. We chose
+\[ \eta_p = \eta_0\,0.01\,\max\big(0,\; -\log_{10}(err)-2\big) \]
+where $\eta_0=0.01$ is the learning rate for the whole model, and $err$ is the training error.
+This means that $\eta_p$ will start becoming non-zero when the training error
+falls below 0.01, and can grow indefinitely as the training error falls
+(although the $a$ parameters are clipped anyway).
+
+\section{Examples}
+
+
+
+-- TODO If not completely linear, approximate using average slope
 
 
 \end{document}
