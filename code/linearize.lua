@@ -3,13 +3,11 @@ require 'nn'
 
 --[[
 This script tests the idea of extracting rules from an NN
-by first simplifying the NN by using PReLUs and moving
-their parameters to 1 (linear unit).
+by using PReLUs and moving their parameters during training
+to make the degenerate into an idenitiy.
 
 Here we train on an artificial dataset.
 ]]
-
--- TODO Prune network by removing linear units
 
 --[[
 ABOUT PRELUs
@@ -17,24 +15,26 @@ ABOUT PRELUs
 See
 https://github.com/torch/nn/blob/master/doc/transfer.md#prelu
 https://github.com/torch/nn/blob/master/PReLU.lua
-https://github.com/torch/cunn/blob/master/lib/THCUNN/PReLU.cu
-https://github.com/torch/cunn/blob/master/lib/THCUNN/generic/PReLU.cu
 
 ]]
 
+-- Configuration
 local DType = 'torch.FloatTensor'
-local HiddenSize = 5 -- neurons on hidden layers
-local HiddenLayers = 4 -- number of hidden layers
-local OptimState = {learningRate = 0.01} -- 0.01
 local InputSize = 4
 local OutputSize = 3
+local HiddenSize = 5 -- size of hidden layers
+local HiddenLayers = 4 -- number of hidden layers
+local OptimState = {learningRate = 0.01} -- 0.01
+local Problem = 'xor' -- 'xor' or 'addition'
 local BatchSize = 1
-local AddNoise = false -- whether to add Guassian noise (new noise in every batch). Set BatchSize to 5 if yes
+local AddNoise = false -- whether to add Guassian noise (new noise in every batch). Set BatchSize to >1 if yes
 local NoiseRate = 0.01
 
+-- Keep the network layers for processing
 local prelus = {}
 local linears = {}
 
+-- Build the model
 local function createModelCriterion(inputsize, outputsize)
 
    local s = nn.Sequential()
@@ -61,6 +61,7 @@ local function createModelCriterion(inputsize, outputsize)
    return s:type(DType), nn.MSECriterion():type(DType)
 end
 
+-- Build training data
 local function createSample()
    local x = torch.Tensor(16*BatchSize, InputSize)
    local y = torch.Tensor(16*BatchSize, OutputSize)
@@ -70,20 +71,28 @@ local function createSample()
          for b2 = 0,1 do
             for b3 = 0,1 do
                for b4 = 0,1 do
+                  -- inputs
                   x[i][1] = b1
                   x[i][2] = b2
                   x[i][3] = b3
                   x[i][4] = b4
                   
-                  -- y[i][1] = (b1 + b2) % 2 -- xor, OutputSize = 2
-                  -- y[i][2] = (b3 + b4) % 2 -- xor
+                  -- targets
                   
-                  local yy = b1*2 + b2 + b3*2 + b4 -- addition of two 2bit numbers
-                  y[i][3] = yy % 2
-                  yy = math.floor(yy/2)
-                  y[i][2] = yy % 2
-                  yy = math.floor(yy/2)
-                  y[i][1] = yy
+                  if Problem == 'xor' then
+                     y[i][1] = (b1 + b2) % 2 -- xor
+                     y[i][2] = (b3 + b4) % 2 -- xor
+                     y[i][3] = (b1 * b2) -- and
+                  end
+                  
+                  if Problem == 'addition' then
+                     local yy = b1*2 + b2 + b3*2 + b4 -- addition of two 2bit numbers
+                     y[i][3] = yy % 2
+                     yy = math.floor(yy/2)
+                     y[i][2] = yy % 2
+                     yy = math.floor(yy/2)
+                     y[i][1] = yy
+                  end
                   
                   i = i + 1
                end -- b4
@@ -100,16 +109,16 @@ local function createSample()
 end
 
 -- -----------------------------------------------------------
--- Convert to expressions
+-- Convert network parameters to expressions
 -- -----------------------------------------------------------
 
--- Print weights and biases as a linear expression
+-- Print weights and bias as a linear expression
 function print_wb(weight, bias, do_normalise)
    local div = 1
    if do_normalise then div = torch.max(torch.abs(weight)) end
    local o = ""
    for j = 1, weight:size(1) do
-      o = o .. string.format("%+1.2f i%d ", weight[j]/div, j)
+      o = o .. string.format("%+1.2f*in%d ", weight[j]/div, j)
    end
    o = o .. string.format("%+1.2f", bias/div)
    return o
@@ -118,7 +127,7 @@ end
 function print_wbs(weight, bias)
    assert(weight:size(1) == bias:size(1), "mismatch between weight and bias")
    for i = 1, weight:size(1) do
-      print(string.format("  o%d = %s", i, print_wb(weight[i], bias[i])))
+      print(string.format("  out%d = %s", i, print_wb(weight[i], bias[i])))
    end
 end
 
@@ -138,8 +147,6 @@ function convert_as_linear(uptolevel, decisions)
          bias = linears[level].weight * bias + linears[level].bias
       end
       
-      -- TODO If not completely linear, approximate using average slope
-      
       -- The output of this layer is modified by nonlinear relus and the decisions
       if level < uptolevel then
          for decix, dec in ipairs(decisions) do
@@ -158,7 +165,7 @@ end
 
 local ineq_expr = {pos=">", neg="<"}
 
--- Extract rules from a network of few nonlinear ReLUs
+-- Extract rules from a network with few nonlinear ReLUs
 function extract()
    
    local decisions = {}
@@ -166,18 +173,18 @@ function extract()
    -- Check all prelus for non-linear ones
    for prelulevel, prelu in ipairs(prelus) do
       for i = 1, prelu.weight:size(1) do
-         if prelu.weight[i] < 0.9995 then -- if it's not a linear relu
+         if prelu.weight[i] <= 0.9995 then -- if it's not a linear relu
             table.insert(decisions, {level=prelulevel, index=i, weight=prelu.weight[i], decision='neg'})
          end
       end
    end
 
    if #decisions > 5 then
-      print("Too many decisions: "..#decisions)
+      print("Too many nonlinear PReLUs: "..#decisions)
       return
    end
    
-   -- WARNING The decisions may depend on each other!
+   -- The decisions may depend on each other!
    -- We use the fact that the decisions are ordered by level
    -- so only later ones can depend on earlier ones
    local dodecisions = true
@@ -187,8 +194,9 @@ function extract()
       for decix, dec in ipairs(decisions) do
          local decw, decb = convert_as_linear(dec.level, decisions)
          print(string.format(
-            "IF %s %s 0  (#%d on level %d is %s [%.2f])",
-            print_wb(decw[dec.index], decb[dec.index], true), ineq_expr[dec.decision],
+            "IF %s %s 0  (PReLU #%d on level %d is %s. ln(1-weight)=%.2f)",
+            print_wb(decw[dec.index], decb[dec.index], true), 
+            ineq_expr[dec.decision],
             dec.index, dec.level, dec.decision, math.log(1-dec.weight)
          ))
       end
@@ -197,7 +205,7 @@ function extract()
       print_wbs(w, b)
       print("")
       
-      -- Try to increment the decisions (the last one first!)
+      -- Move on to the next decision pattern (modify the last one first!)
       local addlevel = #decisions -- level of carry
       while decisions[addlevel].decision == 'pos' do
          addlevel = addlevel - 1
@@ -222,37 +230,28 @@ end
 -- -----------------------------------------------------------
 
 local model, criterion = createModelCriterion(InputSize, OutputSize)
-local x, y = createSample()
+local x, y = createSample() -- generate training data
 
 model:training()
 
 local rep = 0
-
 local params, gradParams = model:getParameters()
-
 local adjustrate = 0
 
 -- Pull the parameter of the PReLUs to 1
 function adjust_prelus()
    for _, relu in ipairs(prelus) do
       relu.weight = relu.weight + (1-relu.weight):sign() * adjustrate
-      
-      -- Limit the weight between 0 and 1
+      -- Limit the weight to be between 0 and 1
       relu.weight:clamp(0, 1)
    end
 end
 
 -- Print the parameters of the network
+-- We assume that PReLUs are sandwiched between the linear layers
 function print_params()
-   print("PReLU parameters")
-   for _, relu in ipairs(prelus) do
-      for i = 1, relu.weight:size(1) do
-         io.write(string.format(" %+1.5f", relu.weight[i]))
-      end
-      io.write("\n")
-   end
-   print("Linear layers, weights and biases")
-   for _, m in ipairs(linears) do
+   for lix, m in ipairs(linears) do
+      print(string.format("Linear layer #%d:", lix))
       for i = 1, m.weight:size(1) do
          for j = 1, m.weight:size(2) do
             io.write(string.format(" %+1.5f", m.weight[i][j]))
@@ -261,7 +260,14 @@ function print_params()
          io.write(string.format(" %+1.5f", m.bias[i]))
          io.write("\n")
       end
-      io.write("\n")
+      if lix <= #prelus then
+         io.write("PReLU parameters:")
+         relu = prelus[lix]
+         for i = 1, relu.weight:size(1) do
+            io.write(string.format(" %+1.5f", relu.weight[i]))
+         end
+         io.write("\n")
+      end
    end
 end
 
@@ -276,16 +282,14 @@ function evaluate(train_err, train_prediction)
    adjustrate = math.max(0,-(math.log(train_err)/math.log(10))-2) * 0.01 * OptimState.learningRate
 
    print("")
+   print("Train error", train_err)
    print("Learning rate", OptimState.learningRate)
    print("PReLU adjust rate", adjustrate)
    print_params()
    extract()
 
-   model:evaluate()
-   
-   print("Train error", train_err)
-   
-   model:training()
+   -- model:evaluate()
+   -- model:training()
 end
 
 -- The training function
@@ -297,6 +301,7 @@ function feval(params)
    model:backward(x, gradCriterion)
    
    -- Do manual training instead of optim
+   -- As optim code gets confused if we manually adjust the PReLU parameters
    model:updateParameters(OptimState.learningRate)
    model:zeroGradParameters()
    
@@ -307,18 +312,10 @@ end
 
 -- The training loop
 while true do
-   -- !!! WARNING This does not call updateParameters !!!
-   -- !!! This appears to rely on remembering what the weights were, so we cannot modify them
-
-   -- Do manual training
-   -- !!! Full batch learning doesn't work well with this.
    feval()
-
    adjust_prelus()
 
    if AddNoise then
-      x, y = createSample() -- get new noise
+      x, y = createSample() -- get new noise by regenerating training data
    end
 end
-
-
