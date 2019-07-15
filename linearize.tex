@@ -25,30 +25,59 @@ defined as
 Let the input of the network be the vector (or tensor, which we flatten) $I=(i_1, i_2, \ldots, i_n)$
 and the output be the vector (or tensor) $O=(o_1, o_2, \ldots, o_m)$.
 
+\section{The Neural Network as a Combination of Linear Functions}
+
 It is easy to see that the output $O$ of such a network can be expressed
 as a set of linear combinations of $i_x$, each restricted to a particular region of input values
-by a set of linear inequalities on $i_x$.
+by a set of linear inequalities on $i_x$ (the conditions).
 
 Intuitively, this is true because the output is a linear function of the input
 as long as (that is, inside regions of the possible input vectors in which) none of the inputs of PReLUs
-cross from negative to positive or \emph{vice versa}; and the borders of these regions
+cross from negative to positive or \emph{vice versa}; and because the borders of these regions
 are linear as well.
 
 More formally, we can show that this statement is true by constructing a suitable
-system of linear functions for any given neural network.
+system of linear combinations and inequalities for any given neural network.
 For all PReLUs in the network, let us decide whether their inputs are negative, or nonnegative.
-If the number of PReLUs is $\Delta$, this means $2^\Delta$ possible scenarios.
+If the number of PReLUs is $\delta$, this means $2^\delta$ possible scenarios.
 In each scenario, the neural network becomes completely linear, with the output being a linear function of the input,
-and, in fact, all partial results in the network being linear functions of the input.
-This entails that the inputs of PReLUs are also linear functions of the input, yielding
-the $\Delta$ linear inequalities that mark out the portion of the input space where this scenario is true.
+and, in fact, with all partial results inside the network being linear functions of the input as well.
+This entails that the inputs of PReLUs are also linear functions of the input $I$, yielding
+the $\delta$ linear inequalities (the conditions) that mark out the region of the input space where this scenario applies.
 
-Naturally, this system of $2^\Delta$ linear combinations yielding the output, each controlled by $\Delta$
-inequalities is likely to be redundant, as the inequalities may not be independent,
-or may be contradictory, in which case the portion of the input space is empty.
+Naturally, this system of $2^\delta$ linear combinations yielding the output, each controlled by $\delta$
+conditions is likely to be redundant, as the conditions may not be independent,
+or may be contradictory, in which case the region of the input space will be empty.
 But this system will be an accurate description of the output of the neural network nevertheless.
 
+\bigskip
 
+While a linear function may seem easy to interpret and to predict for us humans, clearly $2^\delta$
+functions will not be so if $\delta$ is in the range of thousands or millions as in most modern neural networks.
+We therefore need to construct an approximation of the output of our neural network which is linear in much
+larger regions of the input space, and has far less different regions as well.
+This is equivalent to trying to find another neural network that approximates our network well,
+but contains a small number of PReLUs only.
+
+\section{Reducing PReLUs into Lineraities}
+
+We achieve this by continuing training the original neural network while applying a force on each of
+its PReLUs that moves its parameter $a$ towards 1.
+
+Note that if $a=1$, then the PReLU degenerates into the identity function $f(x)=x$, and ceases to be a nonlinearity.
+In a sense, it disappears, and the neural network ``collapses'' around it, inasmuch as the linear mapping
+that precedes the degenerate PReLU and the one after it can now be combined into a single linear map.
+
+This force therefore finds a balance between approximating the training data
+and reducing the number of PReLUs, thereby yielding a neural network that can be feasilby expressed
+as a set of linear functions and inequalities.
+By removing nonlinearities, this force also reduces the capacity of the neural network,
+and therefore we expect that it can also be helpful in avoid overfitting.
+
+This force is a static force applied after each backpropagation step, that moves the parameter by an adjustment rate
+$\epsilon$ but never above 1:
+
+\[ a_{t+1} = \max\left(0,\;\min\big(1,\;a_t + \epsilon\,\mathrm{sgn}(1-a_t)\,\big)\right) \]
 
 
 
