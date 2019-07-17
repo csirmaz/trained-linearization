@@ -112,7 +112,7 @@ These layers are linked by trainable fully-connected layers
 with PReLU activation following them, except for the last fully connected layer,
 which simply provides the output.
 
-The neural network is expected to learn the following relationships:
+The network is expected to learn the following relationships:
 \begin{align}
 \mathrm{out}_1 &= \mathrm{in}_1 \;\mathrm{xor}\; \mathrm{in}_2 \\
 \mathrm{out}_2 &= \mathrm{in}_3 \;\mathrm{xor}\; \mathrm{in}_4 \\
@@ -135,8 +135,8 @@ settled on a solution where only two PReLUs were nonlinear.
 
 Although in the visualization the relationships between the inputs and the outputs are far from clear,
 once the rest of the PReLUs are considered linear, all the weights collapse into very simple expressions.
-The sample code contains logic to calculate these expressions for the $2^2$ cases arising from the
-two nonlinear PReLUs. See figure \ref{output} for the expressions derived from this model.
+See \ref{output} for the output of the code listing these expressions for the $2^2$ cases arising from the
+two nonlinear PReLUs.
 
 \begin{figure}[ht]
 \begin{verbatim}
