@@ -105,13 +105,14 @@ These layers are linked by trainable fully-connected layers
 with PReLU activation following them, except for the last fully connected layer,
 which simply provides the output.
 
-The neural network is expected to learn the following correspondence:
+The neural network is expected to learn the following correspondences:
 \begin{align}
 \mathrm{out}_1 &= \mathrm{in}_1 \,\mathrm{xor}\, \mathrm{in}2 \\
 \mathrm{out}_1 &= \mathrm{in}_1 \,\mathrm{xor}\, \mathrm{in}2 \\
 \mathrm{out}_3 &= \mathrm{in}_1 \cdot \mathrm{in}
 \end{align}
-We generate the training data accordingly, based on all inital combinations of 0 and 1. We also some noise to the input.
+Where all the inputs and outputs are 0 or 1, with some extra noise applied to the inputs.
+We generate the training data accordingly, based on the $2^4$ possible combinations of 0 and 1 for the input.
 
 
 \begin{verbatim}

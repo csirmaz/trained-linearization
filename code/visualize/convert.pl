@@ -1,3 +1,5 @@
+#!/usr/bin/perl
+
 # Convert the output of linearize.lua into a JSON data structure
 
 use JSON;
