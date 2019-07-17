@@ -1,6 +1,8 @@
 \documentclass{article}[12pt]
 \usepackage{amsmath}
 \usepackage{hyperref}
+\usepackage{graphicx}
+\graphicspath{ {./images/} }
 \title{Interpreting Neural Nets by Training to Reduce Nonlinearities}
 \author{Elod Pal Csirmaz}
 
@@ -97,55 +99,90 @@ falls below 0.01, and can grow indefinitely as the training error falls
 
 \section{Example}
 
-A toy example network demonstrating the above is available at
+Sample code demonstrating the above is available at
 \url{https://github.com/csirmaz/trained-linearization}.
-It is implemented in Lua/Torch, has 4 input nodes, 3 output nodes, and
+The code implements training a small neural net with the force on PReLU parameters,
+and contains logic to extract a system of linear inequalities and combinations
+from the weights and other parameters of the model.
+
+The neural network itself
+has 4 input nodes, 3 output nodes, and
 4 hidden layers in between with 5 nodes on each.
 These layers are linked by trainable fully-connected layers
 with PReLU activation following them, except for the last fully connected layer,
 which simply provides the output.
 
-The neural network is expected to learn the following correspondences:
+The neural network is expected to learn the following relationships:
 \begin{align}
-\mathrm{out}_1 &= \mathrm{in}_1 \,\mathrm{xor}\, \mathrm{in}2 \\
-\mathrm{out}_1 &= \mathrm{in}_1 \,\mathrm{xor}\, \mathrm{in}2 \\
-\mathrm{out}_3 &= \mathrm{in}_1 \cdot \mathrm{in}
+\mathrm{out}_1 &= \mathrm{in}_1 \;\mathrm{xor}\; \mathrm{in}_2 \\
+\mathrm{out}_2 &= \mathrm{in}_3 \;\mathrm{xor}\; \mathrm{in}_4 \\
+\mathrm{out}_3 &= \mathrm{in}_1 \cdot \mathrm{in}_2
 \end{align}
-Where all the inputs and outputs are 0 or 1, with some extra noise applied to the inputs.
-We generate the training data accordingly, based on the $2^4$ possible combinations of 0 and 1 for the input.
+where all the inputs and outputs are 0 or 1 with some extra noise added to the inputs.
+We generate the training data according to the expressions above, for all $2^4$ possible combinations of 0 and 1 for the input.
+New noise is generated for each batch of training data.
 
+\begin{figure}[ht]
+\centering
+\includegraphics[height=10cm]{example}
+\caption{A trained network with 4 input nodes (top) and 3 output nodes (bottom). Red lines denote positive, blue lines negative weights.
+Lines leading from the right denote bias values. Green boxes mark PReLUs that are considered linear, while red ones mark nonlinear PReLUs.}
+\label{fig}
+\end{figure}
 
+Figure \ref{fig} visualizes a trained model. Two nonlinearities are enough to solve this problem, and indeed the training
+settled on a solution where only two PReLUs were nonlinear.
+
+Although in the visualization the relationships between the inputs and the outputs are far from clear,
+once the rest of the PReLUs are considered linear, all the weights collapse into very simple expressions.
+The sample code contains logic to calculate these expressions for the $2^2$ cases arising from the
+two nonlinear PReLUs. See figure \ref{output} for the expressions derived from this model.
+
+\begin{figure}[ht]
 \begin{verbatim}
-IF +0.00*in1 +0.00*in2 -1.00*in3 -1.00*in4 +1.00 < 0  (PReLU #3 on level 1 is neg. ln(1-weight)=-2.58)  
-IF +1.00*in1 +1.00*in2 -0.00*in3 -0.00*in4 -1.00 < 0  (PReLU #1 on level 4 is neg. ln(1-weight)=-2.60)  
+IF +0.00*in1 +0.00*in2 -1.00*in3 -1.00*in4 +1.00 < 0
+   (PReLU #3 on level 1 is neg. ln(1-weight)=-2.58)  
+IF +1.00*in1 +1.00*in2 -0.00*in3 -0.00*in4 -1.00 < 0
+   (PReLU #1 on level 4 is neg. ln(1-weight)=-2.60)  
 THEN    
   out1 = +1.01*in1 +1.01*in2 -0.00*in3 -0.00*in4 +0.00  
   out2 = -0.00*in1 -0.00*in2 -1.03*in3 -1.03*in4 +2.04  
   out3 = -0.00*in1 -0.00*in2 +0.00*in3 +0.00*in4 -0.00  
         
-IF +0.00*in1 +0.00*in2 -1.00*in3 -1.00*in4 +1.00 < 0  (PReLU #3 on level 1 is neg. ln(1-weight)=-2.58)  
-IF +1.00*in1 +1.00*in2 -0.00*in3 -0.00*in4 -1.00 > 0  (PReLU #1 on level 4 is pos. ln(1-weight)=-2.60)  
+IF +0.00*in1 +0.00*in2 -1.00*in3 -1.00*in4 +1.00 < 0
+   (PReLU #3 on level 1 is neg. ln(1-weight)=-2.58)  
+IF +1.00*in1 +1.00*in2 -0.00*in3 -0.00*in4 -1.00 > 0
+   (PReLU #1 on level 4 is pos. ln(1-weight)=-2.60)  
 THEN    
   out1 = -1.01*in1 -1.01*in2 +0.00*in3 +0.00*in4 +2.02  
   out2 = -0.00*in1 -0.00*in2 -1.03*in3 -1.03*in4 +2.04  
   out3 = +1.00*in1 +1.00*in2 +0.00*in3 +0.00*in4 -1.01  
         
-IF +0.00*in1 +0.00*in2 -1.00*in3 -1.00*in4 +1.00 > 0  (PReLU #3 on level 1 is pos. ln(1-weight)=-2.58)  
-IF +1.00*in1 +1.00*in2 +0.00*in3 +0.00*in4 -1.00 < 0  (PReLU #1 on level 4 is neg. ln(1-weight)=-2.60)  
+IF +0.00*in1 +0.00*in2 -1.00*in3 -1.00*in4 +1.00 > 0
+   (PReLU #3 on level 1 is pos. ln(1-weight)=-2.58)  
+IF +1.00*in1 +1.00*in2 +0.00*in3 +0.00*in4 -1.00 < 0
+   (PReLU #1 on level 4 is neg. ln(1-weight)=-2.60)  
 THEN    
   out1 = +1.01*in1 +1.01*in2 +0.00*in3 +0.00*in4 +0.00  
   out2 = -0.00*in1 -0.00*in2 +1.00*in3 +1.00*in4 +0.01  
   out3 = -0.00*in1 -0.00*in2 -0.00*in3 -0.00*in4 +0.00  
         
-IF +0.00*in1 +0.00*in2 -1.00*in3 -1.00*in4 +1.00 > 0  (PReLU #3 on level 1 is pos. ln(1-weight)=-2.58)  
-IF +1.00*in1 +1.00*in2 +0.00*in3 +0.00*in4 -1.00 > 0  (PReLU #1 on level 4 is pos. ln(1-weight)=-2.60)  
+IF +0.00*in1 +0.00*in2 -1.00*in3 -1.00*in4 +1.00 > 0
+   (PReLU #3 on level 1 is pos. ln(1-weight)=-2.58)  
+IF +1.00*in1 +1.00*in2 +0.00*in3 +0.00*in4 -1.00 > 0
+   (PReLU #1 on level 4 is pos. ln(1-weight)=-2.60)  
 THEN    
   out1 = -1.01*in1 -1.01*in2 -0.00*in3 -0.00*in4 +2.02  
   out2 = -0.00*in1 -0.00*in2 +1.00*in3 +1.00*in4 +0.01  
   out3 = +1.00*in1 +1.00*in2 -0.00*in3 -0.00*in4 -1.01
 \end{verbatim}
+\caption{Sample output from the code}
+\label{output}
+\end{figure}
 
+\section{Future work}
 
+Further simplification
 
 -- TODO If not completely linear, approximate using average slope
 
