@@ -26,8 +26,8 @@ local HiddenSize = 5 -- size of hidden layers
 local HiddenLayers = 4 -- number of hidden layers
 local OptimState = {learningRate = 0.01} -- 0.01
 local Problem = 'xor' -- 'xor' or 'addition'
-local BatchSize = 1
-local AddNoise = false -- whether to add Guassian noise (new noise in every batch). Set BatchSize to >1 if yes
+local BatchSize = 4
+local AddNoise = true -- whether to add Guassian noise (new noise in every batch)
 local NoiseRate = 0.01
 
 -- Keep the network layers for processing

@@ -4,7 +4,8 @@
 \usepackage{graphicx}
 \graphicspath{ {./images/} }
 \title{Interpreting Neural Nets by Training to Reduce Nonlinearities}
-\author{Elod Pal Csirmaz}
+\author{Elod Pal Csirmaz\\
+\texttt{\rot{\rot{maz.}{csir}{ep}com}{@}{elod}}}}
 
 \date{\today}
 \begin{document}
@@ -13,20 +14,63 @@
 
 \begin{abstract}
 Abstract
+
+\myskip
+{\bf Keywords:} % (4-6)
+machine learning,
+neural networks,
+rule extraction,
+linear units
+
+\myskip
+{\bf MSC classes:} % http://www.ams.org/mathscinet/msc/msc2010.html
+62M45,  % Neural nets and related approaches
+68T05   % Learning and adaptive systems
+
+
+\myskip
+{\bf ACM classes:} % http://www.acm.org/about/class/ccs98-html
+
+
 \end{abstract}
 
 \section{Introduction}
 
-Intro
+Machine learning solutions, and, more specifically, neural networks are used
+in more and more areas of our lives. At the same time, since it is difficult to 
+grasp at any level how they function and so they can be seen as black boxes,
+there is a reluctance in their adoption in the case of companies who need to
+remain accountable for business and/or legal reasons. This fact also impacts
+the trust the public places in such systems.
 
-Rule extraction
+Because of this, providing tools that can help us understand how these
+models arrive at a certain decision is an area of active research.
+The tools range from visualization tools, tools that identify the
+most significatn input, tools that allow experimenting with the input data
+to understand the relative importance the model attributes to different
+signals, and, the focus of this paper, significantly reducing the complexity
+of a neural network to the point where ``rules'' for decisions could be
+extracted from it, which then can be reviewed or even used by human decision-makers.
 
-We investigate feed-forward neural networks
+One form these rules can take is a closed, relatively simple algebraic
+expression (for example, a linear function) which has a behavior more
+predictable for humans than the full function implemented by a neural
+network involving parameters and nonlinear functions in the range of
+millions.
+
+In this paper we detail a method of reducing the complexity of a neural
+network during its training, which then allows describing its output as a
+simple system of linear functions limited to regions defined by linear
+inequalities.
+In particular,
+we investigate feed-forward neural networks
 where all nonlinearities are Parametric Rectified Linear Units (PReLUs)
+
 (CITE ?, torch) % https://github.com/torch/nn/blob/master/doc/transfer.md#prelu
 % https://arxiv.org/abs/1502.01852
 defined as
 \[ f(x) = \max(0, x) + a \min(0, x). \]
+where $0\leq a\leq 1$.
 
 Let the input of the network be the vector (or tensor, which we flatten) $I=(i_1, i_2, \ldots, i_n)$
 and the output be the vector (or tensor) $O=(o_1, o_2, \ldots, o_m)$.
