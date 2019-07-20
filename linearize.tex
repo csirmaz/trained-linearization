@@ -3,9 +3,12 @@
 \usepackage{hyperref}
 \usepackage{graphicx}
 \graphicspath{ {./images/} }
+\newcommand{\rot}[3]{#3#2#1}
+\newcommand{\myskip}{\bigskip\noindent}
+
 \title{Interpreting Neural Nets by Training to Reduce Nonlinearities}
 \author{Elod Pal Csirmaz\\
-\texttt{\rot{\rot{maz.}{csir}{ep}com}{@}{elod}}}}
+\texttt{\rot{\rot{maz.}{csir}{ep}com}{@}{elod}}}
 
 \date{\today}
 \begin{document}
@@ -13,30 +16,39 @@
 \maketitle
 
 \begin{abstract}
-Abstract
+Machine learning and neural networks are used more and more widely,
+despite the fact that they mostly function as black boxes, and we
+have little insight into how they reach decisions.
+This makes it difficult to scrutinize and account for decisions made using these systems.
+
+In this paper we present a simple solution that makes it possible to
+extract rules from a neural network that employs Parametric Rectified Linear Units (PReLUs).
+We introduce a force, applied in parallel to backpropagation, that
+aims to reduce PReLUs into the identity function, which then causes
+the neural network to collapse into a smaller system of linear functions and inequalities
+suitable for review or use by human decision makers.
+
+As this force reduces the capacity of neural networks, it is expected to help avoid overfitting as well.
 
 \myskip
 {\bf Keywords:} % (4-6)
 machine learning,
 neural networks,
-rule extraction,
-linear units
+rule extraction
 
 \myskip
 {\bf MSC classes:} % http://www.ams.org/mathscinet/msc/msc2010.html
 62M45,  % Neural nets and related approaches
 68T05   % Learning and adaptive systems
 
-
-\myskip
-{\bf ACM classes:} % http://www.acm.org/about/class/ccs98-html
-
+% \myskip
+% {\bf ACM classes:} % http://www.acm.org/about/class/ccs98-html
 
 \end{abstract}
 
 \section{Introduction}
 
-Machine learning solutions, and, more specifically, neural networks are used
+Machine learning solutions and, more specifically, neural networks are used
 in more and more areas of our lives. At the same time, since it is difficult to 
 grasp at any level how they function and so they can be seen as black boxes,
 there is a reluctance in their adoption in the case of companies who need to
@@ -46,11 +58,11 @@ the trust the public places in such systems.
 Because of this, providing tools that can help us understand how these
 models arrive at a certain decision is an area of active research.
 The tools range from visualization tools, tools that identify the
-most significatn input, tools that allow experimenting with the input data
+most significant input, tools that allow experimenting with the input data
 to understand the relative importance the model attributes to different
 signals, and, the focus of this paper, significantly reducing the complexity
 of a neural network to the point where ``rules'' for decisions could be
-extracted from it, which then can be reviewed or even used by human decision-makers.
+extracted from it, which can then be reviewed or even used by human decision-makers.
 
 One form these rules can take is a closed, relatively simple algebraic
 expression (for example, a linear function) which has a behavior more
@@ -65,12 +77,9 @@ inequalities.
 In particular,
 we investigate feed-forward neural networks
 where all nonlinearities are Parametric Rectified Linear Units (PReLUs)
-
-(CITE ?, torch) % https://github.com/torch/nn/blob/master/doc/transfer.md#prelu
-% https://arxiv.org/abs/1502.01852
 defined as
 \[ f(x) = \max(0, x) + a \min(0, x). \]
-where $0\leq a\leq 1$.
+where $0\leq a\leq 1$.\cite{PR}
 
 Let the input of the network be the vector (or tensor, which we flatten) $I=(i_1, i_2, \ldots, i_n)$
 and the output be the vector (or tensor) $O=(o_1, o_2, \ldots, o_m)$.
@@ -97,12 +106,10 @@ the $\delta$ linear inequalities (the conditions) that mark out the region of th
 
 Naturally, this system of $2^\delta$ linear combinations yielding the output, each controlled by $\delta$
 conditions is likely to be redundant, as the conditions may not be independent,
-or may be contradictory, in which case the region of the input space will be empty.
+or may be contradictory, in which case some of the $2^\delta$ regions of the input space will be empty.
 But this system will be an accurate description of the output of the neural network nevertheless.
 
-\bigskip
-
-\noindent
+\myskip
 While a linear function may seem easy to interpret and to predict for us humans, clearly $2^\delta$
 functions will not be so if $\delta$ is in the range of thousands or millions as in most modern neural networks.
 We therefore need to construct an approximation of the output of our neural network which is linear in much
@@ -120,12 +127,13 @@ In a sense, it disappears, and the neural network ``collapses'' around it, inasm
 that precedes the degenerate PReLU and the one after it can now be combined into a single linear map.
 
 This force therefore finds a balance between approximating the training data
-and reducing the number of PReLUs, thereby yielding a neural network that if feasible to express
+and reducing the number of PReLUs, thereby yielding a neural network that is feasible to express
 as a set of linear functions and inequalities for human consumption.
 By removing nonlinearities, this force also reduces the capacity of the neural network,
 and therefore we expect that it can also be helpful to avoid overfitting.
 
-This force is a static force applied after each backpropagation step, and moves the parameter by an adjustment rate
+We chose a
+force that is a static and is applied after each backpropagation step, and moves the parameter by an adjustment rate
 $\eta_p$ but never above 1:
 \[ a_{t+1} = \max\left(0,\;\min\big(1,\;a_t + \eta_p\,\mathrm{sgn}(1-a_t)\,\big)\right) \]
 
@@ -179,8 +187,9 @@ settled on a solution where only two PReLUs were nonlinear.
 
 Although in the visualization the relationships between the inputs and the outputs are far from clear,
 once the rest of the PReLUs are considered linear, all the weights collapse into very simple expressions.
-See \ref{output} for the output of the code listing these expressions for the $2^2$ cases arising from the
+See figure \ref{output} for the output of the code listing these expressions for the $2^2$ cases arising from the
 two nonlinear PReLUs.
+These correspond completely to the relationships in the training data.
 
 \begin{figure}[ht]
 \begin{verbatim}
@@ -220,15 +229,29 @@ THEN
   out2 = -0.00*in1 -0.00*in2 +1.00*in3 +1.00*in4 +0.01  
   out3 = +1.00*in1 +1.00*in2 -0.00*in3 -0.00*in4 -1.01
 \end{verbatim}
-\caption{Sample output from the code}
+\caption{Sample output of the code}
 \label{output}
 \end{figure}
 
 \section{Future work}
 
-Further simplification
+Future work can include and improved algorithm to extract linear rules from the network
+that recognizes dependencies between the inequalities to simplify its output.
 
--- TODO If not completely linear, approximate using average slope
+Another alternative is to approximate PReLUs that are deemed linear not with $f(x)=x$,
+but with e.g. $f(x)=\frac{a+1}{2}x$, which can allow replacing more PReLUs with a fully linear function than we currently do.
 
+\begin{thebibliography}{99}
+\bibitem{PR}
+Kaiming He and
+               Xiangyu Zhang and
+               Shaoqing Ren and
+               Jian Sun,
+``Delving Deep into Rectifiers: Surpassing Human-Level Performance on
+               ImageNet Classification,''
+Microsoft Research,
+6 February 2015.
+http://arxiv.org/abs/1502.01852.
+\end{thebibliography}
 
 \end{document}
