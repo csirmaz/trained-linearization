@@ -1,7 +1,7 @@
 
-# Linearizing PReLUs
+# Interpreting neural nets by training them to remove nonlinearities
 
-This repo contains a short paper and sample code for
+This repo contains a short paper and sample code demonstrating
 a simple solution that makes it possible to
 extract rules from a neural network that employs Parametric Rectified Linear Units (PReLUs).
 We introduce a force, applied in parallel to backpropagation, that
