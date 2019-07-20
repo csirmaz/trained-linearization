@@ -6,7 +6,7 @@
 \newcommand{\rot}[3]{#3#2#1}
 \newcommand{\myskip}{\bigskip\noindent}
 
-\title{Interpreting Neural Nets by Training to Reduce Nonlinearities}
+\title{Interpreting Neural Networks by Training to Reduce Nonlinearities}
 \author{Elod Pal Csirmaz\\
 \texttt{\rot{\rot{maz.}{csir}{ep}com}{@}{elod}}}
 
@@ -18,7 +18,7 @@
 \begin{abstract}
 Machine learning and neural networks are used more and more widely,
 despite the fact that they mostly function as black boxes, and we
-have little insight into how they reach decisions.
+have little insight into how they generate their output.
 This makes it difficult to scrutinize and account for decisions made using these systems.
 
 In this paper we present a simple solution that makes it possible to
@@ -133,7 +133,7 @@ By removing nonlinearities, this force also reduces the capacity of the neural n
 and therefore we expect that it can also be helpful to avoid overfitting.
 
 We chose a
-force that is a static and is applied after each backpropagation step, and moves the parameter by an adjustment rate
+force that is independent of $a$ and is applied after each backpropagation step, and moves the parameter by an adjustment rate
 $\eta_p$ but never above 1:
 \[ a_{t+1} = \max\left(0,\;\min\big(1,\;a_t + \eta_p\,\mathrm{sgn}(1-a_t)\,\big)\right) \]
 
