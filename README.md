@@ -1,5 +1,5 @@
 
-# Interpreting neural nets by training them to remove nonlinearities
+# Interpreting Neural Networks by Reducing Nonlinearities during Training
 
 This repo contains a short paper and sample code demonstrating
 a simple solution that makes it possible to
