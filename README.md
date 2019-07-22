@@ -10,3 +10,5 @@ the neural network to collapse into a smaller system of linear functions and ine
 suitable for review or use by human decision makers.
 
 As this force reduces the capacity of neural networks, it is expected to help avoid overfitting as well.
+
+Download the article in PDF format from the latest release at https://github.com/csirmaz/trained-linearization/releases/latest .
